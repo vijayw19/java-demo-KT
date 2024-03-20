@@ -1,0 +1,67 @@
+name: $(Build.DefinitionName)_$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+
+trigger:
+- main
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  JAVA_HOME: '/usr/lib/jvm/zulu-8-azure-amd64'
+  MAVEN_HOME: '/usr/share/maven'
+  MAVEN_OPTS: '-Xmx3072m'
+  PATH: '/usr/share/maven/bin:/usr/lib/jvm/zulu-8-azure-amd64/bin:/usr/local/bin:/usr/bin:/bin'
+
+steps:
+
+
+
+
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '17'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+
+- script: |
+    export JAVA_HOME='/usr/lib/jvm/zulu-8-azure-amd64'
+  displayName: 'Set JAVA_HOME'
+
+- task: MavenAuthenticate@0
+  inputs:
+    mavenServiceConnections: 'MavenServiceConnection'
+    artifactsFeeds: yadavvi-feed
+
+- task: Maven@4
+  inputs:
+    mavenPomFile: 'pom.xml'
+    mavenOptions: '-Xmx3072m'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: 'default'
+    jdkArchitectureOption: 'x64'
+    publishJUnitResults: true
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    goals: 'clean deploy -Dmaven.test.failure.ignore=true'
+
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y maven
+  displayName: 'Install Maven'
+
+- task: PublishCodeCoverageResults@1
+  inputs:
+    codeCoverageTool: 'JaCoCo'
+    summaryFileLocation: '$(System.DefaultWorkingDirectory)/target/site/jacoco/jacoco.xml'
+    reportDirectory: '$(System.DefaultWorkingDirectory)/target/site/jacoco'
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    testRunTitle: 'Java Tests'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(System.DefaultWorkingDirectory)/target'
+    artifactName: 'HelloWorld-VJ'
